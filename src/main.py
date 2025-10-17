@@ -1,13 +1,18 @@
 import telebot
-from telebot import types
-from telebot.types import InlineKeyboardButton
 import sqlite3
 
-bot = telebot.TeleBot('8336492357:AAFaNP2Fh01sry8PqdxMXIZCTHTPA5-HExc')
+from telebot import types
+from telebot.types import InlineKeyboardButton
+
+from src.config import config
+
+
+bot = telebot.TeleBot(token=config.telegram.token)
 channel_id = '@ch_vch'
 user_states = {}
-ADMIN_CHAT_IDS = [294829811,727302720]
-#ОСНОВНОЕ МЕНЮ
+ADMIN_CHAT_IDS = [294829811, 727302720]
+
+# Основное меню
 def show_main_menu(chat_id, first_name):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton('📰 Предложить пост')
@@ -15,7 +20,7 @@ def show_main_menu(chat_id, first_name):
     markup.add(btn1, btn2)
     bot.send_message(chat_id,'Есть вопросы?', reply_markup=markup)
 
-#ПРОВЕРКА ПОДПИСЧКИ НА КАНАЛ
+# ПРОВЕРКА ПОДПИСКИ НА КАНАЛ
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
@@ -40,11 +45,11 @@ def start(message):
             show_main_menu(message.chat.id, message.from_user.first_name)
 
     except Exception as e:
+        print('Error:', e)
         bot.send_message(message.chat.id, "❌ Ошибка при проверке подписки.")
 
+
 @bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
-
-
 def check_subscription(call):
     user_id = call.from_user.id
 
@@ -89,7 +94,7 @@ def suggest_question(message):
 
     bot.send_message(message.chat.id,'Слушаю тебя, чувачок. Задавай свой вопрос!')
 
-#ОБРАБОТКА текста пользователя
+# ОБРАБОТКА текста пользователя
 @bot.message_handler(func=lambda message: user_states.get(message.from_user.id) == 'waiting_question')
 def check_waiting_question(message):
     user_id = message.from_user.id
@@ -101,7 +106,7 @@ def check_waiting_question(message):
     if message.from_user.username:
         user_name = f"@{message.from_user.username}"
 
-#ОТЛАДКА
+# Откладка
     print("─" * 50)
     print('Дорогие админы, какой-то папищек вам что-то прислал!')
     print("─" * 50)
@@ -132,7 +137,7 @@ def check_waiting_question(message):
 
     show_main_menu(message.chat.id, message.from_user.first_name)
 
-#ОБРАБОТКА КНОПКИ ПРЕДЛОЖИТЬ ПОСТ
+# ОБРАБОТКА КНОПКИ ПРЕДЛОЖИТЬ ПОСТ
 @bot.message_handler(func=lambda message: message.text == '📰 Предложить пост')
 def suggest_post(message):
     if user_states.get(message.from_user.id) in ['waiting_question', 'waiting_post']:
@@ -152,6 +157,8 @@ def suggest_post(message):
     user_states[message.from_user.id] = 'waiting_post'
 
     bot.send_message(message.chat.id,'Присылай свой пост!')
+
+
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'audio', 'voice'], func=lambda message: user_states.get(message.from_user.id) == 'waiting_post')
 def check_waiting_post(message):
     user_id = message.from_user.id
@@ -230,14 +237,17 @@ def check_waiting_post(message):
 
     show_main_menu(message.chat.id, message.from_user.first_name)
 
+
 @bot.message_handler(content_types = ['text'])
 def defolt_messages(message):
     if user_states.get(message.from_user.id) not in ['waiting_question', 'waiting_post']:
         bot.send_message(message.chat.id,'Я не умею разговаривать, лучше выбери кнопки в меню!')
     show_main_menu(message.chat.id, message.from_user.first_name)
 
-bot.polling(none_stop=True)
+
+if __name__ == '__main__':
+    bot.polling(none_stop=True)
 
 
-# добавить кнопу отмены отправки (назад в меню)
-# заблокировать повторное нажатие кнопок если предложить пост или задать вопрос уже нажали
+# TODO добавить кнопу отмены отправки (назад в меню)
+# TODO заблокировать повторное нажатие кнопок если предложить пост или задать вопрос уже нажали
